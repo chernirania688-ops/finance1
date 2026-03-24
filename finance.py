@@ -83,3 +83,42 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"Erreur lors du calcul : {e}")
+    # --- NOUVELLE SECTION : SIMULATION DE MONTE-CARLO ---
+st.divider()
+st.header(f"🎲 Simulation de Risque (Monte-Carlo) - {nom_entreprise}")
+
+with st.expander("Qu'est-ce que c'est ?"):
+    st.write("L'IA simule 1000 variantes de votre projet avec une marge d'erreur de 10% pour voir si le projet reste rentable en cas de crise ou de succès imprévu.")
+
+# Lancement de la simulation au clic
+if st.button("Lancer le Stress Test (1000 scénarios)"):
+    simulations_van = []
+    
+    for i in range(1000):
+        # On ajoute une variation aléatoire de +/- 10% à chaque Cash Flow
+        cf_simule = [cf * np.random.uniform(0.9, 1.1) for cf in cash_flows_nets]
+        
+        # Calcul de la VAN pour cette simulation
+        van_sim = -io_total
+        for t, cfn in enumerate(cf_simule, start=1):
+            van_sim += cfn / (1 + taux_actualisation)**t
+        simulations_van.append(van_sim)
+    
+    # Calcul des probabilités
+    projets_rentables = sum(1 for v in simulations_van if v > 0)
+    probabilite_succes = (projets_rentables / 1000) * 100
+
+    # Affichage du résultat de l'IA
+    st.metric("Probabilité de rentabilité réelle", f"{probabilite_succes}%")
+    
+    if probabilite_succes > 80:
+        st.success("💪 Le projet est très solide, même en cas de variations du marché.")
+    elif probabilite_succes > 50:
+        st.warning("⚠️ Le projet est sensible aux risques. À surveiller.")
+    else:
+        st.error("🚨 Risque élevé : Le projet échoue dans la majorité des scénarios simulés.")
+
+    # Graphique de distribution des risques
+    fig_hist = go.Figure(data=[go.Histogram(x=simulations_van, marker_color='#FFA15A')])
+    fig_hist.update_layout(title="Distribution des VAN possibles (Stress Test)", xaxis_title="Valeur de la VAN", yaxis_title="Nombre de scénarios")
+    st.plotly_chart(fig_hist, use_container_width=True)
